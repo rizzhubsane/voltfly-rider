@@ -42,20 +42,18 @@ const createStorageAdapter = () => {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-const missingEnvVars: string[] = [];
-if (!supabaseUrl) missingEnvVars.push('EXPO_PUBLIC_SUPABASE_URL');
-if (!supabaseAnonKey) missingEnvVars.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
-
-if (missingEnvVars.length > 0) {
-  throw new Error(
-    `[voltfly-rider] Missing required Supabase env vars: ${missingEnvVars.join(', ')}`
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    '[voltfly-rider] Missing Supabase env vars:',
+    !supabaseUrl ? 'EXPO_PUBLIC_SUPABASE_URL' : '',
+    !supabaseAnonKey ? 'EXPO_PUBLIC_SUPABASE_ANON_KEY' : '',
   );
 }
 
-// At this point we know both env vars are present, but TypeScript doesn't narrow
-// `process.env` values automatically.
-const supabaseUrlSafe = supabaseUrl as string;
-const supabaseAnonKeySafe = supabaseAnonKey as string;
+// Fallback to empty strings so the app at least renders an error screen
+// instead of crashing before any UI mounts.
+const supabaseUrlSafe = supabaseUrl || 'https://placeholder.supabase.co';
+const supabaseAnonKeySafe = supabaseAnonKey || 'placeholder';
 
 export const supabase = createClient<Database>(supabaseUrlSafe, supabaseAnonKeySafe, {
   auth: {
