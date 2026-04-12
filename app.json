@@ -48,6 +48,18 @@
           "androidMode": "default",
           "androidCollapsedTitle": "Voltfly"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Voltfly needs camera access for KYC document photos"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Voltfly needs photo access for KYC documents"
+        }
       ]
     ],
     "experiments": {
