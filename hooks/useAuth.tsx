@@ -69,13 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (phone: string): Promise<{ error: Error | null }> => {
     try {
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/^91/, '')}`;
-      console.log('[useAuth] Bypassing OTP, sending direct to security key for:', formattedPhone);
-      
-      // MOCK FIREBASE OTP SEND
-      verificationIdRef.current = 'dummy_bypass';
-      return { error: null };
-      
-      /*
       return new Promise((resolve) => {
         // Timeout to prevent hanging forever
         const timeoutId = setTimeout(() => {
@@ -86,14 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }, OTP_SEND_TIMEOUT);
 
-        signInResolver.current = (value) => {
+        signInResolver.current = (value: any) => {
           clearTimeout(timeoutId);
           resolve(value);
         };
 
         recaptchaRef.current?.sendOtp(formattedPhone);
       });
-      */
     } catch (err: any) {
       console.error('[useAuth] signIn error:', err);
       return { error: new Error(err.message || 'Failed to send OTP') };
@@ -114,14 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      if (token !== '123456') {
-         return { error: new Error('Invalid security key. Please use the provided password.'), session: null, accessToken: null, rider: null };
-      }
-
-      console.log('[useAuth] Exchanging security key for Supabase session...');
-      const formattedPhone = _phone.startsWith('+') ? _phone : `+91${_phone.replace(/^91/, '')}`;
-
-      /*
       // 1. Verify OTP with Firebase
       console.log('[useAuth] Verifying OTP with ID:', verificationIdRef.current);
       let userCredential;
@@ -140,9 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 2. Get Firebase ID token
       const idToken = await userCredential.user.getIdToken();
       console.log('[useAuth] Got Firebase ID token, exchanging for Supabase session...');
-      */
-      
-      const idToken = token;
+
+      const formattedPhone = _phone.startsWith('+') ? _phone : `+91${_phone.replace(/^91/, '')}`;
 
       // 3. Exchange ID token for Supabase session
       const res = await fetch(`${supabaseUrl}/functions/v1/firebase-verify-token-v2`, {
