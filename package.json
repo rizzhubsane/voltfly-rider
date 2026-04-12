@@ -1,0 +1,77 @@
+{
+  "name": "voltfly-rider",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "build:apk": "eas build --platform android --profile preview --non-interactive --no-wait",
+    "ship:apk": "npx expo-doctor && eas build --platform android --profile preview --non-interactive --no-wait",
+    "finish:apk": "bash scripts/finish-apk-release.sh",
+    "verify": "npx expo-doctor",
+    "fix:git": "node scripts/run-git-fix.cjs",
+    "postinstall": "node scripts/patch-css-interop-babel.js"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-navigation/native": "^7.0.14",
+    "@supabase/supabase-js": "^2.99.2",
+    "bytes": "^3.1.2",
+    "expo": "~52.0.11",
+    "expo-camera": "~16.0.8",
+    "expo-constants": "~17.0.2",
+    "expo-device": "~7.0.1",
+    "expo-font": "~13.0.1",
+    "expo-image-picker": "~16.0.2",
+    "expo-linear-gradient": "~14.0.1",
+    "expo-linking": "~7.0.3",
+    "expo-localization": "~16.0.0",
+    "expo-notifications": "~0.29.11",
+    "expo-router": "~4.0.8",
+    "expo-secure-store": "~14.0.0",
+    "expo-splash-screen": "~0.29.11",
+    "expo-status-bar": "~2.0.0",
+    "expo-symbols": "~0.2.0",
+    "expo-web-browser": "~14.0.1",
+    "firebase": "^11.0.0",
+    "i18next": "^26.0.4",
+    "nativewind": "^4.2.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-hook-form": "^7.71.2",
+    "react-i18next": "^17.0.2",
+    "react-native": "0.76.9",
+    "react-native-razorpay": "^2.3.1",
+    "react-native-reanimated": "~3.16.1",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
+    "react-native-web": "~0.19.13",
+    "react-native-webview": "13.12.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@expo/ngrok": "^4.1.3",
+    "@types/react": "~18.3.1",
+    "tailwindcss": "^3.3.2",
+    "typescript": "~5.3.3"
+  },
+  "expo": {
+    "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      },
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-razorpay",
+          "bytes",
+          "firebase"
+        ],
+        "listUnknownPackages": false
+      }
+    }
+  },
+  "private": true
+}

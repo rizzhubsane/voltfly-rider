@@ -1,0 +1,53 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# Old git repair backups (never commit)
+.git.corrupt-backup-*/
+
+# dependencies
+node_modules/
+node_modules_corrupt/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native tooling
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug / local logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+expo_*.log
+start_output.log
+doctor-out.txt
+eas-apk-build.log
+scripts/git-fix-log.txt
+scripts/finish-apk-release.log
+.agent-run-log.txt
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# NOTE: Do NOT ignore /android or /ios here — this app commits native projects for EAS.
+# Ignoring them hides new Gradle files from `git add` and breaks uploads.
