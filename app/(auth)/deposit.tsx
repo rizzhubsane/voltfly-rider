@@ -79,8 +79,8 @@ export default function DepositScreen() {
       // ── 2. Record payment server-side via Edge Function ───────────────
       // Security Tunnel: Authorization = anon key (bypasses Kong),
       //                  X-Rider-JWT  = real user JWT (verified server-side).
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession?.access_token) {
+      const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+      if (!refreshedSession?.access_token) {
         throw new Error('Session expired. Please log in again.');
       }
 
@@ -93,7 +93,7 @@ export default function DepositScreen() {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${anonKey}`,
           'apikey':         anonKey,
-          'X-Rider-JWT':   currentSession.access_token,
+          'X-Rider-JWT':   refreshedSession.access_token,
         },
         body: JSON.stringify({
           razorpay_payment_id:     result.razorpay_payment_id,
@@ -249,7 +249,7 @@ export default function DepositScreen() {
           {/* Divider + total */}
           <View style={{ height: 1, backgroundColor: '#E2E8F0', marginTop: 4, marginBottom: 12 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontFamily: Font.semiBold, fontSize: 14, color: Colors.text }}>Total</Text>
+            <Text style={{ fontFamily: Font.semibold, fontSize: 14, color: Colors.text }}>Total</Text>
             <Text style={{ fontFamily: Font.bold, fontSize: 18, color: Colors.primary }}>₹{TOTAL_AMOUNT.toLocaleString()}</Text>
           </View>
         </View>
@@ -263,7 +263,7 @@ export default function DepositScreen() {
         }}>
           <Ionicons name="information-circle" size={18} color={Colors.primary} style={{ marginRight: 8, marginTop: 1 }} />
           <Text style={{ fontFamily: Font.regular, fontSize: 12, color: '#1E40AF', flex: 1, lineHeight: 18 }}>
-            <Text style={{ fontFamily: Font.semiBold }}>₹2,000</Text> is fully refundable when you exit the program. The remaining ₹1,800 covers onboarding fees and your first week's rent.
+            <Text style={{ fontFamily: Font.semibold }}>₹2,000</Text> is fully refundable when you exit the program. The remaining ₹1,800 covers onboarding fees and your first week's rent.
           </Text>
         </View>
 
