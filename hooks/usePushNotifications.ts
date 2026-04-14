@@ -57,13 +57,18 @@ export function usePushNotifications() {
 
   async function syncTokenToSupabase(riderId: string, token: string) {
     try {
-      const { error } = await supabase
+      const { data: row } = await supabase
         .from('riders')
-        .update({ 
-            expo_push_token: token,
-            push_notifications_enabled: true 
-        })
-        .eq('id', riderId);
+        .select('push_notifications_enabled')
+        .eq('id', riderId)
+        .maybeSingle();
+
+      const patch: Record<string, unknown> = { expo_push_token: token };
+      if (row?.push_notifications_enabled == null) {
+        patch.push_notifications_enabled = true;
+      }
+
+      const { error } = await supabase.from('riders').update(patch).eq('id', riderId);
 
       if (error) {
         console.error('[PushNotif] Error saving push token to Supabase:', error);

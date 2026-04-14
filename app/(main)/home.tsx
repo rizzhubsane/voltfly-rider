@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
   Animated, RefreshControl, Platform, Image,
@@ -27,7 +27,18 @@ export default function HomeScreen() {
   // Pulse animation for overdue
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const fetchData = async () => {
+  /** Same logical alert (e.g. push + SMS) creates two rows — show one in previews. */
+  const dedupeNotifs = (rows: { type?: string; message?: string; title?: string }[]) => {
+    const seen = new Set<string>();
+    return rows.filter((r) => {
+      const k = `${r.type ?? ''}\0${r.message ?? ''}\0${r.title ?? ''}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+
+  const fetchData = useCallback(async () => {
     if (!user?.id) return;
     try {
       const [riderRes, vehicleRes, notifRes, paymentsRes] = await Promise.all([
@@ -44,7 +55,7 @@ export default function HomeScreen() {
           .maybeSingle(),
         supabase
           .from('notifications')
-          .select('id, title, message, created_at')
+          .select('id, type, title, message, created_at')
           .eq('rider_id', user.id)
           .order('created_at', { ascending: false })
           .limit(3),
@@ -82,9 +93,10 @@ export default function HomeScreen() {
       }
 
       if (notifRes.data) {
-        setNotifications(notifRes.data);
+        const merged = dedupeNotifs(notifRes.data);
+        setNotifications(merged);
         const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-        const unread = notifRes.data.filter((n: any) => n.created_at && n.created_at > oneDayAgo);
+        const unread = merged.filter((n: any) => n.created_at && n.created_at > oneDayAgo);
         setNotifCount(unread.length);
       }
 
@@ -94,9 +106,26 @@ export default function HomeScreen() {
     } catch (e) {
       console.error('[home] fetchData error:', e);
     }
-  };
+  }, [user?.id]);
 
-  useEffect(() => { fetchData(); }, [user?.id]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`home-notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `rider_id=eq.${user.id}` },
+        () => fetchData(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchData]);
 
   useEffect(() => {
     if (rider?.payment_status === 'overdue') {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
   ActivityIndicator,
@@ -14,11 +14,28 @@ import { useTranslation } from 'react-i18next';
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
   payment: { icon: 'card', color: Colors.primary, bg: Colors.primaryBg },
+  payment_reminder: { icon: 'wallet-outline', color: Colors.primary, bg: Colors.primaryBg },
+  wallet_depleted: { icon: 'alert-circle', color: '#DC2626', bg: '#FEF2F2' },
+  admin_broadcast: { icon: 'megaphone-outline', color: '#2563EB', bg: '#EFF6FF' },
   vehicle: { icon: 'bicycle', color: Colors.success, bg: Colors.successBg },
   service: { icon: 'construct', color: '#F59E0B', bg: Colors.warningBg },
   kyc: { icon: 'document-text', color: '#8B5CF6', bg: '#F5F3FF' },
   default: { icon: 'notifications', color: Colors.primary, bg: Colors.primaryBg },
 };
+
+function dedupeNotifRows<T extends { type?: string | null; message?: string | null; title?: string | null }>(
+  rows: T[],
+): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const k = `${r.type ?? ''}\0${r.message ?? ''}\0${r.title ?? ''}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -27,18 +44,36 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadNotifications = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('notifications')
+      .select('id, type, title, message, created_at')
+      .eq('rider_id', user.id)
+      .order('created_at', { ascending: false });
+    if (data) setNotifications(dedupeNotifRows(data));
+    setLoading(false);
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
   useEffect(() => {
     if (!user?.id) return;
-    (async () => {
-      const { data } = await supabase
-        .from('notifications')
-        .select('id, type, title, message, created_at')
-        .eq('rider_id', user.id)
-        .order('created_at', { ascending: false });
-      if (data) setNotifications(data);
-      setLoading(false);
-    })();
-  }, [user?.id]);
+    const channel = supabase
+      .channel(`notifications-screen-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `rider_id=eq.${user.id}` },
+        () => loadNotifications(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, loadNotifications]);
 
   const formatDate = (d: string) => {
     const date = new Date(d);

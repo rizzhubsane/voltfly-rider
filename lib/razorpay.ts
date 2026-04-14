@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RazorpayOrderData {
@@ -31,8 +33,27 @@ export async function createRazorpayOrder(
   receipt?: string,
   notes?: Record<string, string>,
 ): Promise<RazorpayOrderData> {
+  // Fresh access token (cached session is often expired). Web: gateway 401 + missing CORS on
+  // preflight errors surfaces as type "cors" — still a JWT problem at the edge.
+  const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+  let session = refreshed.session;
+  if (!session?.access_token) {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    session = s;
+  }
+  if (refreshErr && !session?.access_token) {
+    console.warn('[razorpay] refreshSession:', refreshErr.message);
+  }
+  if (!session?.access_token) {
+    throw new Error('Please sign in again to continue with payment.');
+  }
+
   const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
     body: { amount, currency: 'INR', receipt, notes },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
+    },
   });
 
   if (error) {
