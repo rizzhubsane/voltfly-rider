@@ -68,14 +68,11 @@ export default function PhoneScreen() {
 
     try {
       const fullPhone = `+91${phone}`;
-      // Check if rider already exists in the database
-      const { data, error } = await supabase
-        .from('riders')
-        .select('id')
-        .eq('phone_1', fullPhone)
-        .limit(1);
+      // Check securely if rider already exists in the database bypassing RLS
+      const { data: exists, error } = await supabase
+        .rpc('check_rider_exists', { phone_number: fullPhone });
 
-      if (!error && data && data.length > 0) {
+      if (!error && exists === true) {
         // Existing rider: skip TnC and send OTP immediately
         const { error: authError } = await signIn(fullPhone);
         if (authError) {
@@ -146,24 +143,16 @@ export default function PhoneScreen() {
           }}
         >
           {/* Logo */}
-          <View style={{ alignItems: 'center', marginBottom: 48 }}>
+          <View style={{ alignItems: 'center', marginTop: 50, marginBottom: 64 }}>
             <Image
               source={require('@/assets/images/logo.png')}
-              style={{ width: 180, height: 60, resizeMode: 'contain', marginBottom: 12 }}
+              style={{ width: 200, height: 65, resizeMode: 'contain' }}
             />
           </View>
 
-          {/* Title */}
-          <Text style={{ ...Type.h2, color: Colors.white, marginBottom: 8 }}>
-            {t('phone.greeting')}
-          </Text>
-          <Text style={{ ...Type.body, color: 'rgba(255,255,255,0.9)', marginBottom: 36, lineHeight: 22 }}>
-            {t('phone.subtitle')}
-          </Text>
-
-          {/* Phone input */}
-          <Text style={{ ...Type.label, color: Colors.white, marginBottom: 8, marginLeft: 4 }}>
-            {t('phone.mobileLabel')}
+          {/* Phone input label */}
+          <Text style={{ ...Type.body, color: Colors.white, marginBottom: 12, marginLeft: 4, fontSize: 16, fontFamily: Font.medium }}>
+            Enter your mobile number
           </Text>
           <Animated.View style={{ transform: [{ scale: inputScale }] }}>
             <View

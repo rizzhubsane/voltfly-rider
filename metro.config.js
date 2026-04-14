@@ -8,4 +8,7 @@ const config = getDefaultConfig(__dirname);
 // getReactNativePersistence and other RN-specific exports.
 config.resolver.unstable_enablePackageExports = true;
 
+// Fix for Node 20 jest-worker deadlock
+config.maxWorkers = 2;
+
 module.exports = withNativeWind(config, { input: './global.css' });

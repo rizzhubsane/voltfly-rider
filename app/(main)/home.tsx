@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  Animated, RefreshControl, Platform,
+  Animated, RefreshControl, Platform, Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Href } from 'expo-router';
@@ -60,7 +60,7 @@ export default function HomeScreen() {
 
       if (riderRes.data) {
         const wBalance = riderRes.data.wallet_balance ?? 0;
-        const rate = riderRes.data.daily_deduction_rate ?? 250;
+        const rate = riderRes.data.daily_deduction_rate ?? 230;
         const isOverdue = wBalance <= 0;
         let isBlocked = riderRes.data.status === 'suspended';
         
@@ -137,7 +137,7 @@ export default function HomeScreen() {
   const greeting = hour < 12 ? t('home.goodMorning') : hour < 17 ? t('home.goodAfternoon') : t('home.goodEvening');
 
   // ── Remaining Credit Calculation ─────────────────────────────────────────
-  const dailyRate = rider?.daily_deduction_rate ?? 250;
+  const dailyRate = rider?.daily_deduction_rate ?? 230;
   const wBalance = rider?.wallet_balance ?? 0;
 
 
@@ -157,12 +157,12 @@ export default function HomeScreen() {
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={{ fontFamily: Font.regular, fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>
-                {greeting} {t('home.greeting')}
-              </Text>
-              <Text style={{ fontFamily: Font.bold, fontSize: 26, color: Colors.white, marginTop: 4 }}>
-                {firstName}
-              </Text>
+              <Image 
+                source={require('@/assets/images/logo.png')}
+                style={{ width: 140, height: 42, resizeMode: 'contain', 
+                         tintColor: 'white' // Assuming logo needs to be white over blue gradient
+                      }}
+              />
             </View>
             <TouchableOpacity
               onPress={() => router.push('/(main)/notifications' as Href)}
@@ -186,7 +186,7 @@ export default function HomeScreen() {
         </LinearGradient>
 
         {/* Content Area with Negative Margin for Overlap */}
-        <View style={{ paddingHorizontal: 24, marginTop: -50 }}>
+        <View style={{ paddingHorizontal: 24, marginTop: -20 }}>
           
           {/* ── New Ultra-Simple Wallet Hero Card ─────────────────────── */}
           {(() => {
@@ -201,117 +201,94 @@ export default function HomeScreen() {
 
             return (
               <View style={{
-                backgroundColor: '#FFF',
+                backgroundColor: isOverdue || rider?.isBlocked ? '#DC2626' : '#059669',
                 borderRadius: 24,
                 padding: 24,
                 marginBottom: 28,
-                shadowColor: '#1E3A8A', shadowOffset: { width: 0, height: 16 },
-                shadowOpacity: 0.08, shadowRadius: 32, elevation: 12,
-                borderWidth: isOverdue ? 2 : 1,
-                borderColor: isOverdue ? '#FECACA' : '#F3F4F6',
+                shadowColor: isOverdue || rider?.isBlocked ? '#DC2626' : '#059669', 
+                shadowOffset: { width: 0, height: 16 },
+                shadowOpacity: 0.2, shadowRadius: 32, elevation: 12,
               }}>
 
                 {/* Status chip */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, justifyContent: 'center' }}>
                   <View style={{
                     flexDirection: 'row', alignItems: 'center',
-                    backgroundColor: isOverdue ? '#FEF2F2' : (rider?.isBlocked ? '#FEF2F2' : '#EFF6FF'),
-                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16,
                   }}>
                     <View style={{
-                      width: 6, height: 6, borderRadius: 3, marginRight: 6,
-                      backgroundColor: isOverdue ? '#EF4444' : (rider?.isBlocked ? '#EF4444' : '#2563EB'),
+                      width: 12, height: 12, borderRadius: 6, marginRight: 12,
+                      backgroundColor: '#FFF',
                     }} />
-                    <Text style={{ fontFamily: Font.bold, fontSize: 13, textTransform: 'uppercase', color: isOverdue ? '#DC2626' : (rider?.isBlocked ? '#DC2626' : '#2563EB'), letterSpacing: 0.5 }}>
+                    <Text style={{ fontFamily: Font.bold, fontSize: 22, textTransform: 'uppercase', color: '#FFF', letterSpacing: 1.5 }}>
                       {rider?.isBlocked ? t('home.batteryBlockedLabel', 'RESTRICTED') : isOverdue ? t('home.walletEmptyLabel', 'OVERDUE') : t('home.activeLabel', 'ACTIVE')}
                     </Text>
                   </View>
                 </View>
 
-                {isOverdue ? (
+                {isOverdue || rider?.isBlocked ? (
                   /* ── BLOCKED / OVERDUE state ── */
                   <Animated.View style={{ transform: [{ scale: pulseAnim }], alignItems: 'center', marginBottom: 24 }}>
-                    <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                       <Text style={{ fontSize: 40 }}>🔒</Text>
                     </View>
-                    <Text style={{ fontFamily: Font.bold, fontSize: 24, color: '#EF4444', textAlign: 'center' }}>
-                      {t('home.swapBlockedHeadline')}
+                    <Text style={{ fontFamily: Font.bold, fontSize: 24, color: '#FFF', textAlign: 'center' }}>
+                      {t('home.swapBlockedHeadline', 'Swaps Blocked')}
                     </Text>
-                    <Text style={{ fontFamily: Font.medium, fontSize: 15, color: '#6B7280', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
-                      {t('home.addMoneyToUnlock')}
+                    <Text style={{ fontFamily: Font.medium, fontSize: 16, color: 'rgba(255,255,255,0.85)', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
+                      {t('home.addMoneyToUnlock', 'Add money to your wallet to immediately unlock battery swaps.')}
                     </Text>
                   </Animated.View>
                 ) : (
-                  /* ── ACTIVE state: Massive Days Left ── */
+                  /* ── ACTIVE state: Massive Wallet Balance ── */
                   <View style={{ alignItems: 'center', marginBottom: 28 }}>
-                    <Text style={{ fontFamily: Font.bold, fontSize: 96, color: '#0F172A', lineHeight: 100, letterSpacing: -3 }}>
-                      {days}
+                    <Text 
+                      style={{ fontFamily: Font.bold, fontSize: 62, color: '#FFF', lineHeight: 72, letterSpacing: -2 }}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
+                      ₹{Math.abs(wBalance).toLocaleString('en-IN')}
                     </Text>
-                    <Text style={{ fontFamily: Font.bold, fontSize: 15, color: '#64748B', textTransform: 'uppercase', letterSpacing: 2, marginTop: 4 }}>
-                      {t('home.daysLeftLabel', 'Days Remaining')}
+                    <Text style={{ fontFamily: Font.bold, fontSize: 14, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 4 }}>
+                      {t('home.yourMoneyLeft', 'Wallet Balance')}
                     </Text>
                   </View>
                 )}
 
-                {/* ── Balance Box ── */}
+                {/* ── Days Left Box ── */}
                 <View style={{
-                  backgroundColor: '#F8FAFC', borderRadius: 16,
-                  paddingVertical: 18, paddingHorizontal: 20,
+                  backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16,
+                  paddingVertical: 16, paddingHorizontal: 20,
                   alignItems: 'center', marginBottom: 24,
-                  borderWidth: 1, borderColor: '#F1F5F9',
                 }}>
-                  <Text style={{ fontFamily: Font.bold, fontSize: 36, color: isOverdue ? '#EF4444' : '#0F172A', letterSpacing: -1 }}>
-                    ₹{Math.abs(wBalance).toLocaleString('en-IN')}
+                  <Text style={{ fontFamily: Font.bold, fontSize: 32, color: '#FFF', letterSpacing: -1 }}>
+                    {days} Days
                   </Text>
-                  <Text style={{ fontFamily: Font.medium, fontSize: 13, color: '#64748B', marginTop: 4 }}>
-                    {isOverdue ? t('home.amountOverdueLabel', 'Overdue Amount') : t('home.yourMoneyLeft', 'Current Balance')}
-                  </Text>
-                  <Text style={{ fontFamily: Font.regular, fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
-                    ₹{dailyRate} deducted at 12 AM
+                  <Text style={{ fontFamily: Font.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>
+                    {t('home.daysLeftLabel', 'Approximate Days Remaining')}
                   </Text>
                 </View>
 
-                {/* ── ADD MONEY Big Button ── */}
+                {/* ── ADD MONEY Huge Button ── */}
                 <TouchableOpacity
                   onPress={() => router.push('/(main)/payments' as Href)}
                   activeOpacity={0.8}
                   style={{
-                    backgroundColor: isOverdue ? '#EF4444' : '#1D4ED8',
-                    borderRadius: 16, paddingVertical: 16,
-                    alignItems: 'center', marginBottom: 16,
-                    shadowColor: isOverdue ? '#EF4444' : '#1D4ED8',
-                    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
+                    backgroundColor: '#FFF',
+                    borderRadius: 20, paddingVertical: 20,
+                    alignItems: 'center', marginBottom: 8,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
                   }}
                 >
                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                     <Ionicons name="add-circle" size={22} color="#FFF" style={{ marginRight: 8 }} />
-                     <Text style={{ fontFamily: Font.bold, fontSize: 16, color: '#FFF', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                     <Ionicons name="add-circle" size={26} color={isOverdue || rider?.isBlocked ? '#DC2626' : '#059669'} style={{ marginRight: 10 }} />
+                     <Text style={{ fontFamily: Font.bold, fontSize: 18, color: isOverdue || rider?.isBlocked ? '#DC2626' : '#059669', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                        {isOverdue ? t('home.payNowBtn', 'Clear Dues') : t('home.addMoneyBtn', 'Add Money')}
                      </Text>
                    </View>
                 </TouchableOpacity>
-
-                {/* ── Quick-amount Pills ── */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                  {[
-                    { label: '+₹250', amount: 250 },
-                    { label: '+₹1,610', amount: 1610 },
-                    { label: '+₹6,900', amount: 6900 },
-                  ].map((pill) => (
-                    <TouchableOpacity
-                      key={pill.amount}
-                      onPress={() => router.push('/(main)/payments' as Href)}
-                      style={{
-                        flex: 1, borderRadius: 10, paddingVertical: 10,
-                        backgroundColor: '#F1F5F9', alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ fontFamily: Font.bold, fontSize: 13, color: '#334155' }}>
-                        {pill.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
               </View>
             );
           })()}

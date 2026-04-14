@@ -82,14 +82,40 @@ export default function ServicesScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-    }
+    Alert.alert(
+      'Upload Photo',
+      'Choose a method to attach a photo',
+      [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Camera access is required.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'], allowsEditing: true, quality: 0.7,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setPhotoUri(result.assets[0].uri);
+            }
+          }
+        },
+        {
+          text: 'Gallery',
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'], allowsEditing: true, quality: 0.7,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setPhotoUri(result.assets[0].uri);
+            }
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const togglePart = (item: string) => {

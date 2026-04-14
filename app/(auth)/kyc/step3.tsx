@@ -28,7 +28,7 @@ const DOCS: DocItem[] = [
   { key: 'aadhaar_front', label: 'Aadhaar Front', icon: 'card-outline', dbField: 'aadhaar_front_url' },
   { key: 'aadhaar_back', label: 'Aadhaar Back', icon: 'card-outline', dbField: 'aadhaar_back_url' },
   { key: 'pan', label: 'PAN Card', icon: 'document-text-outline', dbField: 'pan_url' },
-  { key: 'pcc', label: 'Police Clearance', icon: 'shield-checkmark-outline', dbField: 'pcc_url' },
+  { key: 'pcc', label: "Relative's ID Card", icon: 'id-card-outline', dbField: 'pcc_url' },
   { key: 'selfie', label: 'Selfie Photo', icon: 'camera-outline', dbField: 'photo_url' },
 ];
 
@@ -45,7 +45,7 @@ export default function KYCStep3() {
     { key: 'aadhaar_front', label: t('kyc.step3.aadhaarFront'), icon: 'card-outline', dbField: 'aadhaar_front_url' },
     { key: 'aadhaar_back', label: t('kyc.step3.aadhaarBack'), icon: 'card-outline', dbField: 'aadhaar_back_url' },
     { key: 'pan', label: t('kyc.step3.panCard'), icon: 'document-text-outline', dbField: 'pan_url' },
-    { key: 'pcc', label: t('kyc.step3.policeCheck'), icon: 'shield-checkmark-outline', dbField: 'pcc_url' },
+    { key: 'pcc', label: t('kyc.step3.policeCheck', "Relative's ID Card"), icon: 'id-card-outline', dbField: 'pcc_url' },
     { key: 'selfie', label: t('kyc.step3.selfie'), icon: 'camera-outline', dbField: 'photo_url' },
   ];
 
@@ -62,24 +62,44 @@ export default function KYCStep3() {
   }, [kycData]);
 
   const pickAndUpload = async (doc: DocItem) => {
+    Alert.alert(
+      'Upload Photo',
+      `Choose a method to upload ${doc.label}`,
+      [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Camera access is required to take photos.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'], allowsEditing: true, quality: 0.3, base64: true,
+            });
+            handleImageResult(doc, result);
+          }
+        },
+        {
+          text: 'Gallery',
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'], allowsEditing: true, quality: 0.3, base64: true,
+            });
+            handleImageResult(doc, result);
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleImageResult = async (doc: DocItem, result: ImagePicker.ImagePickerResult) => {
+    if (result.canceled || !result.assets[0].base64) return;
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.3, // Compressed to keep Base64 size safe for DB
-        base64: true, // Natively returns base64 string
-      });
-
-      if (result.canceled || !result.assets[0].base64) return;
-
       setUploading(doc.key);
-      
-      // We skip Supabase Storage entirely. The Storage RLS policy actively blocks uploads, 
-      // so we convert the image directly to a Base64 string and save it straight into the database URL column.
       const base64Url = `data:image/jpeg;base64,${result.assets[0].base64}`;
-
       await saveKyc({ [doc.dbField]: base64Url } as any);
-
       setUploads(prev => ({ ...prev, [doc.key]: base64Url }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Please try again.';

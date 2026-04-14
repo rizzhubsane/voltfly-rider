@@ -33,7 +33,7 @@ export default function ProfileScreen() {
         supabase
           .from('riders')
           // Fetch all available columns for profile
-          .select('name, phone_1, phone_2, status, hub_id, push_notifications_enabled, wallet_balance, payment_status, created_at, daily_deduction_rate, driver_id')
+          .select('name, phone_1, phone_2, status, hub_id, push_notifications_enabled, wallet_balance, payment_status, created_at, daily_deduction_rate, driver_id, gig_company')
           .eq('id', user.id)
           .single(),
         supabase
@@ -132,34 +132,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleExit = () => {
-    const exitMsg = t('profile.exitMessage');
-    if (Platform.OS === 'web') {
-      const confirmExit = window.confirm(exitMsg);
-      if (confirmExit) {
-        if (user?.id) {
-          supabase.from('riders').update({ status: 'exited' }).eq('id', user.id).then(async () => {
-            await signOut();
-            router.replace('/');
-          });
-        }
-      }
-      return;
-    }
-    Alert.alert(t('profile.exitTitle'), exitMsg, [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.confirmExit'), style: 'destructive',
-        onPress: async () => {
-          if (user?.id) {
-            await supabase.from('riders').update({ status: 'exited' }).eq('id', user.id);
-            await signOut();
-            router.replace('/');
-          }
-        },
-      },
-    ]);
-  };
+
 
   const handleToggleLanguage = async () => {
     const newLang: SupportedLanguage = currentLang === 'en' ? 'hi' : 'en';
@@ -181,7 +154,7 @@ export default function ProfileScreen() {
 
   // Subscription info — now based on wallet_balance
   const walletBalance = rider?.wallet_balance ?? 0;
-  const dailyRate = rider?.daily_deduction_rate ?? 250;
+  const dailyRate = rider?.daily_deduction_rate ?? 230;
   const isSubscriptionActive = walletBalance > 0;
   const daysLeft = isSubscriptionActive ? Math.floor(walletBalance / dailyRate) : 0;
 
@@ -259,6 +232,41 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Gig Company Selection */}
+        <View style={{ marginHorizontal: 24, marginBottom: 24 }}>
+          <Text style={{ ...Type.captionMd, color: Colors.textMuted, marginBottom: 10, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+            {t('profile.gigCompany', 'Gig Company')}
+          </Text>
+          <View style={{ backgroundColor: Colors.white, borderRadius: Radius.xl, overflow: 'hidden', ...Shadow.sm }}>
+            <View style={{
+              flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 16
+            }}>
+              {['Zomato', 'Swiggy', 'Zepto', 'Blinkit', 'Rapido', 'Uber', 'Ola', 'Other'].map((company) => (
+                <TouchableOpacity
+                  key={company}
+                  onPress={async () => {
+                    setRider(r => ({ ...r, gig_company: company }));
+                    if (user?.id) {
+                      await supabase.from('riders').update({ gig_company: company }).eq('id', user.id);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: rider?.gig_company === company ? Colors.primary : Colors.primaryBg,
+                    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
+                  }}
+                >
+                  <Text style={{
+                    fontFamily: Font.medium, fontSize: 14,
+                    color: rider?.gig_company === company ? Colors.white : Colors.primary
+                  }}>
+                    {company}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
         {/* Security Deposit removed per user request */}
 
         {/* Settings */}
@@ -325,16 +333,7 @@ export default function ProfileScreen() {
             <Text style={{ fontFamily: Font.medium, fontSize: 15, color: Colors.textSecondary }}>{t('profile.signOut')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleExit}
-            style={{
-              backgroundColor: Colors.dangerBg, borderRadius: Radius.lg,
-              padding: 16, flexDirection: 'row', alignItems: 'center',
-            }}
-          >
-            <Ionicons name="close-circle-outline" size={20} color={Colors.danger} style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: Font.medium, fontSize: 15, color: Colors.danger }}>{t('profile.exitVoltfly')}</Text>
-          </TouchableOpacity>
+
         </View>
       </ScrollView>
     </SafeAreaView>

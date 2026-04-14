@@ -14,8 +14,8 @@ import { Colors, Font, Type, Shadow, Radius, ButtonPrimary } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const CUSTOM_DAILY_RATE = 250;
-const PRICING = { daily: 250, weekly: 1610, monthly: 6900 };
+const CUSTOM_DAILY_RATE = 230;
+const PRICING = { daily: 230, weekly: 1610, monthly: 6900 };
 
 export default function PaymentsScreen() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function PaymentsScreen() {
   const [validUntil, setValidUntil] = useState<string | null>(null);
   const [depositInfo, setDepositInfo] = useState<any>(null);
   const [outstandingBalance, setOutstandingBalance] = useState(0);
-  const [riderDailyRate, setRiderDailyRate] = useState(250);
+  const [riderDailyRate, setRiderDailyRate] = useState(230);
 
   const PREDEFINED_PLANS = [
     { id: 'daily', label: t('payments.daily'), amount: PRICING.daily, desc: t('payments.daily_desc'), days: 1 },
@@ -75,7 +75,7 @@ export default function PaymentsScreen() {
         }
         // Save raw balance for UI
         setValidUntil(wBalance.toString());
-        setRiderDailyRate(riderRes.data.daily_deduction_rate ?? 250);
+        setRiderDailyRate(riderRes.data.daily_deduction_rate ?? 230);
       }
       
       if (depositRes.data) setDepositInfo(depositRes.data);
@@ -171,7 +171,7 @@ export default function PaymentsScreen() {
         });
       }
 
-      const newRate = (totalAmountPaid === 1610 || totalAmountPaid === 6900) ? 230 : 250;
+      const newRate = (totalAmountPaid === 1610 || totalAmountPaid === 6900) ? 230 : 230;
       await supabase.from('riders').update({
         wallet_balance: newWalletBalance,
         payment_status: 'paid', // optional fallback
