@@ -38,6 +38,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-asset",
+        {
+          "assets": ["./assets/adi-registration.properties"]
+        }
+      ],
       "expo-router",
       [
         "expo-notifications",
