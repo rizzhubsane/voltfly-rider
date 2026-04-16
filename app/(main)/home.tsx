@@ -246,10 +246,6 @@ export default function HomeScreen() {
                     backgroundColor: 'rgba(255,255,255,0.2)',
                     paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16,
                   }}>
-                    <View style={{
-                      width: 12, height: 12, borderRadius: 6, marginRight: 12,
-                      backgroundColor: '#FFF',
-                    }} />
                     <Text style={{ fontFamily: Font.bold, fontSize: 22, textTransform: 'uppercase', color: '#FFF', letterSpacing: 1.5 }}>
                       {rider?.isBlocked ? t('home.batteryBlockedLabel', 'RESTRICTED') : isOverdue ? t('home.walletEmptyLabel', 'OVERDUE') : t('home.activeLabel', 'ACTIVE')}
                     </Text>
@@ -271,15 +267,15 @@ export default function HomeScreen() {
                   </Animated.View>
                 ) : (
                   /* ── ACTIVE state: Massive Wallet Balance ── */
-                  <View style={{ alignItems: 'center', marginBottom: 28 }}>
+                  <View style={{ alignItems: 'center', marginBottom: 12 }}>
                     <Text 
-                      style={{ fontFamily: Font.bold, fontSize: 62, color: '#FFF', lineHeight: 72, letterSpacing: -2 }}
+                      style={{ fontFamily: Font.bold, fontSize: 72, color: '#FFF', lineHeight: 82, letterSpacing: -2 }}
                       numberOfLines={1}
                       adjustsFontSizeToFit={true}
                     >
-                      ₹{Math.abs(wBalance).toLocaleString('en-IN')}
+                      ₹ {Math.abs(wBalance).toLocaleString('en-IN')}
                     </Text>
-                    <Text style={{ fontFamily: Font.bold, fontSize: 14, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 4 }}>
+                    <Text style={{ fontFamily: Font.bold, fontSize: 16, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 6 }}>
                       {t('home.yourMoneyLeft', 'Wallet Balance')}
                     </Text>
                   </View>
@@ -287,14 +283,15 @@ export default function HomeScreen() {
 
                 {/* ── Days Left Box ── */}
                 <View style={{
-                  backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16,
-                  paddingVertical: 16, paddingHorizontal: 20,
-                  alignItems: 'center', marginBottom: 24,
+                  backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 14,
+                  paddingVertical: 12, paddingHorizontal: 28,
+                  alignItems: 'center', alignSelf: 'stretch',
+                  marginTop: 36, marginBottom: 20,
                 }}>
-                  <Text style={{ fontFamily: Font.bold, fontSize: 32, color: '#FFF', letterSpacing: -1 }}>
+                  <Text style={{ fontFamily: Font.bold, fontSize: 20, color: '#FFF', letterSpacing: -0.5 }}>
                     {days} Days
                   </Text>
-                  <Text style={{ fontFamily: Font.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>
+                  <Text style={{ fontFamily: Font.medium, fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
                     {t('home.daysLeftLabel', 'Approximate Days Remaining')}
                   </Text>
                 </View>
@@ -311,12 +308,9 @@ export default function HomeScreen() {
                     shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
                   }}
                 >
-                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                     <Ionicons name="add-circle" size={26} color={isOverdue || rider?.isBlocked ? '#DC2626' : '#059669'} style={{ marginRight: 10 }} />
-                     <Text style={{ fontFamily: Font.bold, fontSize: 18, color: isOverdue || rider?.isBlocked ? '#DC2626' : '#059669', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                       {isOverdue ? t('home.payNowBtn', 'Clear Dues') : t('home.addMoneyBtn', 'Add Money')}
-                     </Text>
-                   </View>
+                   <Text style={{ fontFamily: Font.bold, fontSize: 18, color: isOverdue || rider?.isBlocked ? '#DC2626' : '#059669', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                     {isOverdue ? t('home.payNowBtn', 'Clear Dues') : t('home.addMoneyBtn', 'Add Money')}
+                   </Text>
                 </TouchableOpacity>
               </View>
             );

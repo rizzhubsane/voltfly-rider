@@ -21,8 +21,9 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "credentialsSource": "remote",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     }
   },

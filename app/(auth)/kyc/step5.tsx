@@ -72,6 +72,9 @@ export default function KYCStep5() {
     setSaving(true);
     setApiError('');
     try {
+      // Save final KYC step with kyc_status: 'submitted'.
+      // The save-kyc edge function auto-promotes this to 'approved'
+      // and sets rider.status = 'kyc_approved' in one atomic step.
       await saveKyc({
         ref1_name: formData.ref1.name.trim(),
         ref1_phone: formData.ref1.phone,
@@ -82,11 +85,8 @@ export default function KYCStep5() {
         kyc_status: 'submitted',
       }, session?.access_token);
 
-      await saveRiderProfile({
-        status: 'kyc_submitted',
-      }, session?.access_token);
-
-      router.replace('/(auth)/kyc/submitted' as any);
+      // Navigate directly to approved — no intermediate review screen
+      router.replace('/(auth)/approved' as any);
     } catch (err: any) {
       const message = err?.message || 'Failed to save. Please try again.';
       console.error('[KYC Step5] Save error:', message);

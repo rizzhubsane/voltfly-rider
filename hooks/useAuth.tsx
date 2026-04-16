@@ -1,265 +1,231 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
-import { auth } from '@/lib/init-firebase';
 import { Platform } from 'react-native';
-import { FirebaseRecaptcha, FirebaseRecaptchaRef } from '@/components/FirebaseRecaptcha';
 
-const OTP_SEND_TIMEOUT = 20000; // 20 seconds
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface RiderMeta {
+  id: string;
+  status: string | null;
+  hub_id: string | null;
+}
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: (phone: string) => Promise<{ error: Error | null }>;
-  verifyOtp: (
-    phone: string,
-    token: string
-  ) => Promise<{
+  /** Check if a phone number is registered and whether a PIN has been set */
+  checkPhone: (phone: string) => Promise<{
     error: Error | null;
-    session: Session | null;
-    accessToken: string | null;
-    rider: { id: string; status: string | null; hub_id: string | null } | null;
+    exists?: boolean;
+    needs_pin_setup?: boolean;
+    tnc_accepted?: boolean;
+    status?: string;
+  }>;
+  /** First-time: accept TnC + set PIN → creates auth user → issues session */
+  setupPin: (phone: string, pin: string) => Promise<{
+    error: Error | null;
+    rider: RiderMeta | null;
+  }>;
+  /** Returning rider: phone + PIN → verify → issues session */
+  signInWithPin: (phone: string, pin: string) => Promise<{
+    error: Error | null;
+    locked_until?: string;
+    retry_after_seconds?: number;
+    attempts_remaining?: number;
+    rider: RiderMeta | null;
   }>;
   signOut: () => Promise<void>;
 }
+
+// ─── Context defaults ─────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
-  signIn: async () => ({ error: null }),
-  verifyOtp: async () => ({ error: null, session: null, accessToken: null, rider: null }),
+  checkPhone: async () => ({ error: null }),
+  setupPin: async () => ({ error: null, rider: null }),
+  signInWithPin: async () => ({ error: null, rider: null }),
   signOut: async () => {},
 });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+  return phone.startsWith('+') ? phone : `+91${phone}`;
+}
+
+async function callEdgeFunction(
+  functionName: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; data: any }> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
+}
+
+// ─── AuthProvider ─────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // References for Firebase Recaptcha flow
-  const recaptchaRef = useRef<FirebaseRecaptchaRef>(null);
-  const verificationIdRef = useRef<string | null>(null);
-  const signInResolver = useRef<((value: { error: Error | null }) => void) | null>(null);
-
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-
   useEffect(() => {
-    // Get initial Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for Supabase auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  /**
-   * Step 1: Send OTP via Firebase Phone Auth using invisible WebView Recaptcha
-   */
-  const signIn = async (phone: string): Promise<{ error: Error | null }> => {
+  // ─── checkPhone ────────────────────────────────────────────────────────────
+
+  const checkPhone = async (phone: string) => {
     try {
-      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/^91/, '')}`;
-      console.log('[useAuth] Bypassing OTP, sending direct to security key for:', formattedPhone);
-      
-      // MOCK FIREBASE OTP SEND
-      verificationIdRef.current = 'dummy_bypass';
-      return { error: null };
-      
-      /*
-      return new Promise((resolve) => {
-        // Timeout to prevent hanging forever
-        const timeoutId = setTimeout(() => {
-          console.error('[useAuth] OTP send timed out after', OTP_SEND_TIMEOUT, 'ms');
-          if (signInResolver.current) {
-            signInResolver.current({ error: new Error('OTP request timed out. Please check your connection and try again.') });
-            signInResolver.current = null;
-          }
-        }, OTP_SEND_TIMEOUT);
-
-        signInResolver.current = (value) => {
-          clearTimeout(timeoutId);
-          resolve(value);
-        };
-
-        recaptchaRef.current?.sendOtp(formattedPhone);
+      const { ok, data } = await callEdgeFunction('check-rider-phone', {
+        phone_number: normalizePhone(phone),
       });
-      */
+
+      if (!ok) {
+        return { error: new Error(data?.error || 'Failed to verify phone number') };
+      }
+
+      return {
+        error: null,
+        exists: data.exists as boolean,
+        needs_pin_setup: data.needs_pin_setup as boolean,
+        tnc_accepted: data.tnc_accepted as boolean,
+        status: data.status as string | undefined,
+      };
     } catch (err: any) {
-      console.error('[useAuth] signIn error:', err);
-      return { error: new Error(err.message || 'Failed to send OTP') };
+      console.error('[useAuth] checkPhone error:', err);
+      return { error: new Error(err.message || 'Network error. Check your connection.') };
     }
   };
 
-  /**
-   * Step 2: Verify OTP via Firebase JS SDK, then exchange ID token for Supabase session
-   */
-  const verifyOtp = async (_phone: string, token: string) => {
+  // ─── setupPin ──────────────────────────────────────────────────────────────
+
+  const setupPin = async (phone: string, pin: string) => {
     try {
-      if (!verificationIdRef.current) {
-        return {
-          error: new Error('No OTP request in progress. Please request a new code.'),
-          session: null,
-          accessToken: null,
-          rider: null,
-        };
-      }
-
-      if (token !== '123456') {
-         return { error: new Error('Invalid security key. Please use the provided password.'), session: null, accessToken: null, rider: null };
-      }
-
-      console.log('[useAuth] Exchanging security key for Supabase session...');
-      const formattedPhone = _phone.startsWith('+') ? _phone : `+91${_phone.replace(/^91/, '')}`;
-
-      /*
-      // 1. Verify OTP with Firebase
-      console.log('[useAuth] Verifying OTP with ID:', verificationIdRef.current);
-      let userCredential;
-
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).firebaseConfirmationResult) {
-        // Use Web SDK's preferred method for OTP confirmation
-        console.log('[useAuth] Using web confirmationResult.confirm()');
-        userCredential = await (window as any).firebaseConfirmationResult.confirm(token);
-        (window as any).firebaseConfirmationResult = null; // cleanup
-      } else {
-        // Use Native fallback or standard credential approach
-        const credential = PhoneAuthProvider.credential(verificationIdRef.current, token);
-        userCredential = await signInWithCredential(auth, credential);
-      }
-
-      // 2. Get Firebase ID token
-      const idToken = await userCredential.user.getIdToken();
-      console.log('[useAuth] Got Firebase ID token, exchanging for Supabase session...');
-      */
-      
-      const idToken = token;
-
-      // 3. Exchange ID token for Supabase session
-      const res = await fetch(`${supabaseUrl}/functions/v1/firebase-verify-token-v2`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({ idToken, phone_number: formattedPhone }),
+      const { ok, data } = await callEdgeFunction('setup-rider-pin', {
+        phone_number: normalizePhone(phone),
+        pin,
+        tnc_accepted: true,
       });
 
-      const data = await res.json();
-      console.log('[useAuth] Firebase verify response:', { ok: res.ok, success: data.success, hasRider: !!data.rider });
-
-      if (!res.ok || !data.success) {
-        return {
-          error: new Error(data.error || 'Failed to create session'),
-          session: null,
-          accessToken: null,
-          rider: null,
-        };
+      if (!ok || !data.success) {
+        return { error: new Error(data?.error || 'Failed to set up access code'), rider: null };
       }
 
-      // 4. Set Supabase session
-      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      // Set Supabase session in the client
+      const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       });
 
       if (sessionError) {
-        return { error: sessionError, session: null, accessToken: null, rider: null };
+        return { error: sessionError, rider: null };
       }
 
-      // CRITICAL DIAGNOSTIC: Compare IDs
-      const sessionUserId = sessionData.session?.user.id;
-      const returnedRiderId = data.rider?.id;
-      console.log(`[useAuth] ID COMPARISON: SessionUser=${sessionUserId} | RiderResult=${returnedRiderId}`);
-      if (sessionUserId && returnedRiderId && sessionUserId !== returnedRiderId) {
-        console.warn(`[useAuth] ID MISMATCH DETECTED! The app is logged in as ${sessionUserId} but the backend created rider ${returnedRiderId}. This will cause count=0 errors.`);
-      }
-
-      // Cleanup
-      verificationIdRef.current = null;
-      await auth.signOut();
-
-      console.log('[useAuth] Authentication complete, rider status:', data.rider?.status);
-
-      return {
-        error: null,
-        session: sessionData.session,
-        accessToken: sessionData.session?.access_token ?? data.session.access_token ?? null,
-        rider: data.rider ?? null,
-      };
+      return { error: null, rider: data.rider as RiderMeta };
     } catch (err: any) {
-      console.error('[useAuth] verifyOtp error:', err.code, err.message);
-      const message =
-        err.code === 'auth/invalid-verification-code'
-          ? 'Invalid OTP. Please check and try again.'
-          : err.code === 'auth/session-expired'
-          ? 'OTP has expired. Please request a new code.'
-          : err.code === 'auth/code-expired'
-          ? 'OTP has expired. Please request a new code.'
-          : err.message || 'OTP verification failed';
-      return { error: new Error(message), session: null, accessToken: null, rider: null };
+      console.error('[useAuth] setupPin error:', err);
+      return { error: new Error(err.message || 'Network error. Check your connection.'), rider: null };
     }
   };
+
+  // ─── signInWithPin ─────────────────────────────────────────────────────────
+
+  const signInWithPin = async (phone: string, pin: string) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/rider-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ phone_number: normalizePhone(phone), pin }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      // Lockout
+      if (res.status === 429) {
+        return {
+          error: new Error(data?.error || 'Account locked. Try again later.'),
+          locked_until: data.locked_until,
+          retry_after_seconds: data.retry_after_seconds,
+          rider: null,
+        };
+      }
+
+      // Wrong PIN — return attempts remaining
+      if (res.status === 401) {
+        return {
+          error: new Error(data?.error || 'Incorrect access code.'),
+          attempts_remaining: data.attempts_remaining,
+          rider: null,
+        };
+      }
+
+      if (!res.ok || !data.success) {
+        return { error: new Error(data?.error || 'Authentication failed.'), rider: null };
+      }
+
+      // Set Supabase session
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      if (sessionError) {
+        return { error: sessionError, rider: null };
+      }
+
+      return { error: null, rider: data.rider as RiderMeta };
+    } catch (err: any) {
+      console.error('[useAuth] signInWithPin error:', err);
+      return { error: new Error(err.message || 'Network error. Check your connection.'), rider: null };
+    }
+  };
+
+  // ─── signOut ───────────────────────────────────────────────────────────────
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
-      console.warn('[useAuth] Supabase sign out error (likely expired/deleted):', e);
+      console.warn('[useAuth] Supabase sign out error:', e);
       if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-        // Clear all supabase auth keys as fallback
         Object.keys(localStorage)
           .filter(k => k.startsWith('sb-'))
           .forEach(k => localStorage.removeItem(k));
       }
     }
-
-    // Explicitly clear session immediately — don't wait for onAuthStateChange
     setSession(null);
-
-    try {
-      if (auth.currentUser) {
-        await auth.signOut();
-      }
-    } catch (e) {
-      console.warn('[useAuth] Firebase sign out error:', e);
-    }
   };
 
-  const handleRecaptchaSuccess = (verificationId: string) => {
-    console.log('[useAuth] Recaptcha success, verificationId:', verificationId);
-    verificationIdRef.current = verificationId;
-    if (signInResolver.current) {
-      signInResolver.current({ error: null });
-      signInResolver.current = null;
-    }
-  };
-
-  const handleRecaptchaError = (error: string) => {
-    console.error('[useAuth] Recaptcha error:', error);
-    const message = 
-      error.includes('auth/too-many-requests')
-        ? 'Too many attempts. Please try again later.'
-        : error.includes('auth/invalid-phone-number')
-        ? 'Invalid phone number format.'
-        : error.includes('auth/network-request-failed')
-        ? 'Network error. Please check your connection.'
-        : error;
-
-    if (signInResolver.current) {
-      signInResolver.current({ error: new Error(message) });
-      signInResolver.current = null;
-    }
-  };
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <AuthContext.Provider
@@ -267,17 +233,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user: session?.user ?? null,
         loading,
-        signIn,
-        verifyOtp,
+        checkPhone,
+        setupPin,
+        signInWithPin,
         signOut,
       }}
     >
       {children}
-      <FirebaseRecaptcha 
-        ref={recaptchaRef}
-        onSuccess={handleRecaptchaSuccess}
-        onError={handleRecaptchaError}
-      />
     </AuthContext.Provider>
   );
 }

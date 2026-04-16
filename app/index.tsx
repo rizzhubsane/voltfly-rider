@@ -10,7 +10,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 type BootstrapTarget =
   | '/(auth)/phone'
   | '/(auth)/kyc/step1'
-  | '/(auth)/kyc/submitted'
   | '/(auth)/approved'
   | '/(auth)/hub-select'
   | '/(auth)/waiting'
@@ -96,11 +95,7 @@ export default function SplashScreen() {
 
       switch (rider.status) {
         case 'pending_kyc':
-        case 'kyc_rejected':
           await navigate('/(auth)/kyc/step1');
-          return;
-        case 'kyc_submitted':
-          await navigate('/(auth)/kyc/submitted');
           return;
         case 'kyc_approved':
           await navigate('/(auth)/approved');

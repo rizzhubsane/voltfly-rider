@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Animated,
   Keyboard,
@@ -18,18 +17,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, Font, Type, Shadow, Radius } from '@/lib/theme';
-import TnCModal from '@/components/TnCModal';
-import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
 
 export default function PhoneScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { checkPhone } = useAuth();
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showTnc, setShowTnc] = useState(false);
 
   // Animations
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -57,7 +53,7 @@ export default function PhoneScreen() {
     Animated.spring(inputScale, { toValue: 1, friction: 8, useNativeDriver: true }).start();
   };
 
-  const handleSendOtp = async () => {
+  const handleContinue = async () => {
     if (phone.length !== 10) {
       setError('Please enter a valid 10-digit mobile number');
       return;
@@ -67,44 +63,25 @@ export default function PhoneScreen() {
     setIsLoading(true);
 
     try {
-      const fullPhone = `+91${phone}`;
-      // Check securely if rider already exists in the database bypassing RLS
-      const { data: exists, error } = await supabase
-        .rpc('check_rider_exists', { phone_number: fullPhone });
+      const result = await checkPhone(phone);
 
-      if (!error && exists === true) {
-        // Existing rider: skip TnC and send OTP immediately
-        const { error: authError } = await signIn(fullPhone);
-        if (authError) {
-          setError(authError.message || 'Failed to send OTP. Please try again.');
-          return;
-        }
-        router.push({ pathname: '/(auth)/otp', params: { phone } });
-      } else {
-        // New rider or check failed: show TnC modal
-        setShowTnc(true);
-      }
-    } catch {
-      // Fallback to showing TnC if network check fails
-      setShowTnc(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConsentRecorded = async () => {
-    setShowTnc(false);
-    setIsLoading(true);
-    try {
-      const fullPhone = `+91${phone}`;
-      const { error: authError } = await signIn(fullPhone);
-
-      if (authError) {
-        setError(authError.message || 'Failed to send OTP. Please try again.');
+      if (result.error) {
+        setError(result.error.message || 'Something went wrong. Please try again.');
         return;
       }
 
-      router.push({ pathname: '/(auth)/otp', params: { phone } });
+      if (!result.exists) {
+        setError('This number is not registered with Voltfly. Contact your fleet manager.');
+        return;
+      }
+
+      if (result.needs_pin_setup) {
+        // First-time rider: go to set-pin screen
+        router.push({ pathname: '/(auth)/set-pin' as any, params: { phone } });
+      } else {
+        // Returning rider: go to verify-pin screen
+        router.push({ pathname: '/(auth)/verify-pin' as any, params: { phone } });
+      }
     } catch {
       setError('Something went wrong. Please check your connection and try again.');
     } finally {
@@ -231,7 +208,7 @@ export default function PhoneScreen() {
             </View>
           ) : null}
 
-          {/* Send OTP button */}
+          {/* Continue button */}
           <TouchableOpacity
             style={{
               height: 56,
@@ -242,14 +219,14 @@ export default function PhoneScreen() {
               backgroundColor: isValid && !isLoading ? Colors.primary : `${Colors.primary}60`,
               ...(isValid && !isLoading ? Shadow.primary : {}),
             }}
-            onPress={handleSendOtp}
+            onPress={handleContinue}
             disabled={!isValid || isLoading}
             activeOpacity={0.8}
           >
             {isLoading ? (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={Colors.white} style={{ marginRight: 10 }} />
-                <Text style={Type.button}>{t('phone.sendingOtp')}</Text>
+                <Text style={Type.button}>Checking...</Text>
               </View>
             ) : (
               <Text style={Type.button}>{t('phone.continueBtn')}</Text>
@@ -270,12 +247,6 @@ export default function PhoneScreen() {
       </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <TnCModal
-        visible={showTnc}
-        phone={phone}
-        onClose={() => setShowTnc(false)}
-        onConsentRecorded={handleConsentRecorded}
-      />
     </LinearGradient>
   );
 }

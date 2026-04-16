@@ -51,3 +51,7 @@ scripts/finish-apk-release.log
 
 # NOTE: Do NOT ignore /android or /ios here — this app commits native projects for EAS.
 # Ignoring them hides new Gradle files from `git add` and breaks uploads.
+
+# Build artifacts
+bundle.js
+out.css

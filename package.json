@@ -12,6 +12,7 @@
     "finish:apk": "bash scripts/finish-apk-release.sh",
     "verify": "npx expo-doctor",
     "fix:git": "node scripts/run-git-fix.cjs",
+    "fix:git-stall": "node scripts/clear-git-index-lock.cjs",
     "postinstall": "node scripts/patch-css-interop-babel.js"
   },
   "dependencies": {
@@ -39,7 +40,6 @@
     "expo-status-bar": "~2.0.0",
     "expo-symbols": "~0.2.0",
     "expo-web-browser": "~14.0.1",
-    "firebase": "^11.0.0",
     "i18next": "^26.0.4",
     "nativewind": "^4.2.3",
     "react": "18.3.1",
