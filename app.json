@@ -18,20 +18,29 @@
       "bundleIdentifier": "com.voltfly.rider",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Voltfly sends you alerts for payment reminders, KYC status updates, and important account notifications."
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
       "package": "com.voltflyrider",
-      "targetSdkVersion": 35,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/one.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "bundler": "metro",
@@ -41,7 +50,9 @@
       [
         "expo-asset",
         {
-          "assets": ["./assets/adi-registration.properties"]
+          "assets": [
+            "./assets/adi-registration.properties"
+          ]
         }
       ],
       "expo-router",
@@ -66,6 +77,15 @@
         {
           "photosPermission": "Voltfly needs photo access for KYC documents"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35
+          }
+        }
       ]
     ],
     "experiments": {
@@ -76,6 +96,9 @@
       "eas": {
         "projectId": "f9ef1d5e-f537-445a-b5ab-caed30d6d640"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f9ef1d5e-f537-445a-b5ab-caed30d6d640"
     }
   }
 }
