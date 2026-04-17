@@ -273,7 +273,7 @@ export const FirebaseRecaptcha = forwardRef<FirebaseRecaptchaRef, Props>(
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
         <WebView
           ref={webViewRef}
-          source={{ html: HTML_CONTENT, baseUrl: 'https://voltfly-prodrider.firebaseapp.com' }}
+          source={{ html: HTML_CONTENT, baseUrl: 'https://voltflyev.firebaseapp.com' }}
           onMessage={handleMessage}
           style={{ backgroundColor: 'transparent', flex: 1, opacity: 0 }}
           javaScriptEnabled={true}

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "VoltFly EV",
-    "slug": "voltfly-rider",
+    "slug": "voltflyev",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/one.png",
@@ -92,13 +92,16 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "f9ef1d5e-f537-445a-b5ab-caed30d6d640"
+        "projectId": "8b4efff5-21f8-471b-b8ea-72295471669a"
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/f9ef1d5e-f537-445a-b5ab-caed30d6d640"
-    }
+      "url": "https://u.expo.dev/8b4efff5-21f8-471b-b8ea-72295471669a"
+    },
+    "owner": "rizzhubsane1s-organization"
   }
 }

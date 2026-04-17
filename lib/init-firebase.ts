@@ -4,11 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyAc5XdhOB8cedZX-zsTTDC0KxfzNjCgILM",
-  authDomain: "voltfly-prodrider.firebaseapp.com",
-  projectId: "voltfly-prodrider",
-  storageBucket: "voltfly-prodrider.firebasestorage.app",
-  appId: "1:1066408236847:android:1a58e66d6af5e348c633da",
+  apiKey: "AIzaSyByBQBIKJdBNn-xUTDWaHHWhWHlU-pY3Uw",
+  authDomain: "voltflyev.firebaseapp.com",
+  projectId: "voltflyev",
+  storageBucket: "voltflyev.firebasestorage.app",
+  appId: "1:175288794190:android:bf96db924fd3f0ac38171f",
 };
 
 // Initialize Firebase App

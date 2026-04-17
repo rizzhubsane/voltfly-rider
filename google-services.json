@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1066408236847",
-    "project_id": "voltfly-prodrider",
-    "storage_bucket": "voltfly-prodrider.firebasestorage.app"
+    "project_number": "175288794190",
+    "project_id": "voltflyev",
+    "storage_bucket": "voltflyev.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1066408236847:android:1a58e66d6af5e348c633da",
+        "mobilesdk_app_id": "1:175288794190:android:bf96db924fd3f0ac38171f",
         "android_client_info": {
           "package_name": "com.voltflyrider"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAc5XdhOB8cedZX-zsTTDC0KxfzNjCgILM"
+          "current_key": "AIzaSyByBQBIKJdBNn-xUTDWaHHWhWHlU-pY3Uw"
         }
       ],
       "services": {
