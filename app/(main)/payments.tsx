@@ -171,7 +171,7 @@ export default function PaymentsScreen() {
         });
       }
 
-      const newRate = (totalAmountPaid === 1610 || totalAmountPaid === 6900) ? 230 : 230;
+      const newRate = 230;
       await supabase.from('riders').update({
         wallet_balance: newWalletBalance,
         payment_status: 'paid', // optional fallback
